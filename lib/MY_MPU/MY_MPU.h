@@ -1,7 +1,7 @@
 #ifndef __MY_MPU_H
 #define __MY_MPU_H
 
-#include "stm32f1xx_hal.h"
+#include "main.h"
 
 typedef enum{
     SELF_TEST_X_GYRO    = 0x00,
@@ -40,12 +40,10 @@ typedef enum{
     GYRO_YOUT_H         = 0x45,
     GYRO_YOUT_L         = 0x46,
     GYRO_ZOUT_H         = 0x47,
-    GYRO_ZOUT_L         = 0x48 
+    GYRO_ZOUT_L         = 0x48,
+    WHOAMI              = 0x75,
+    READ                = 0x80
 }MPU_Address;
-
-typedef enum{
-
-}MPU_Values;
 
 typedef enum{
     GYRO_250_FS = 0x00,
@@ -63,23 +61,30 @@ typedef enum{
 
 typedef enum{
     DLPF_disable = 0x000,
-    DLPF_1 = 0x001, //
+    DLPF_1 = 0x001, // for gyroscope, rate 1kHz, delay 2.9ms
     DLPF_2 = 0x010,
     DLPF_3 = 0x011,
     DLPF_4 = 0x100,
     DLPF_5 = 0x101,
     DLPF_6 = 0x110,
-    DLPF_7 = 0x111
+    DLPF_7 = 0x111 // for accelerometer, rate 1kHz, delay 1.38ms
 }DLPF_Mode;
 
 typedef struct{
-    SPI_HandleTypeDef port;
-    float accel_scale;
-    float gyro_scale;
+    SPI_HandleTypeDef* port;
+    double accel_scale;
+    double gyro_scale;
     MPU_Accel_Scale MPU_accel_scale;
     MPU_Gyro_Scale MPU_gyro_scale;
 
-    DLPF_Mode DLFP_mode; 
+    DLPF_Mode a_DLFP_mode, g_DLFP_mode; 
 }MPU;
+
+typedef enum{
+    OK = 1,
+    ERR = 0
+} MPU_STATUS;
+
+MPU_STATUS init(MPU*, SPI_HandleTypeDef*, MPU_Accel_Scale, MPU_Gyro_Scale, DLPF_Mode, DLPF_Mode);
 
 #endif
