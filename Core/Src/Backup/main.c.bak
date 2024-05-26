@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "MY_MPU.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -43,6 +44,8 @@
 SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
+
+MPU mpu;
 
 /* USER CODE END PV */
 
@@ -89,6 +92,8 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
+  
+  init(&mpu, &hspi1, ACCEL_4G_FS, GYRO_1000_FS, DLPF_7, DLPF_1);
 
   /* USER CODE END 2 */
 
