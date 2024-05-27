@@ -28,10 +28,12 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f1xx_hal.h"
-#include "MY_MPU.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+
+#include "MY_MPU.h"
+#include "math.h"
 
 /* USER CODE END Includes */
 
@@ -60,8 +62,6 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define NCS_Pin GPIO_PIN_4
 #define NCS_GPIO_Port GPIOA
-#define INT_Pin GPIO_PIN_8
-#define INT_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 

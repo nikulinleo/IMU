@@ -24,6 +24,7 @@ typedef enum{
     LP_ACCEL_ODR        = 0x1E,
     WOM_THR             = 0x1F,
     FIFO_EN             = 0x23,
+    I2C_MST_CTRL        = 0x24,
     INT_PIN_CFG         = 0x37,
     INT_ENABLE          = 0x38,
     INT_STATUS          = 0x3A,
@@ -42,6 +43,9 @@ typedef enum{
     GYRO_ZOUT_H         = 0x47,
     GYRO_ZOUT_L         = 0x48,
     WHOAMI              = 0x75,
+    USER_CTRL           = 0x6A,
+    PWR_MGMT_1          = 0x6B, 
+    PWR_MGMT_2          = 0x6C,
     READ                = 0x80
 }MPU_Address;
 
@@ -62,12 +66,12 @@ typedef enum{
 typedef enum{
     DLPF_disable = 0x000,
     DLPF_1 = 0x001, // for gyroscope, rate 1kHz, delay 2.9ms
-    DLPF_2 = 0x010,
+    DLPF_2 = 0x010, // for accelerometer, rate 1kHz, delay 2.88ms
     DLPF_3 = 0x011,
     DLPF_4 = 0x100,
     DLPF_5 = 0x101,
     DLPF_6 = 0x110,
-    DLPF_7 = 0x111 // for accelerometer, rate 1kHz, delay 1.38ms
+    DLPF_7 = 0x111 
 }DLPF_Mode;
 
 typedef struct{

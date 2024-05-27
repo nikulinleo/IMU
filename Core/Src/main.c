@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -43,12 +44,13 @@
 SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim1;
-
-PCD_HandleTypeDef hpcd_USB_FS;
+TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
 
 MPU mpu;
+
+double volatile orient[8]={0,1,0,0,0,0,0,0};
 
 /* USER CODE END PV */
 
@@ -57,7 +59,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_TIM1_Init(void);
-static void MX_USB_PCD_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -97,10 +99,14 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI1_Init();
   MX_TIM1_Init();
-  MX_USB_PCD_Init();
+  MX_USB_DEVICE_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  
-  if(init(&mpu, &hspi1, ACCEL_4G_FS, GYRO_1000_FS, DLPF_7, DLPF_1)) HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+
+  if(init(&mpu, &hspi1, ACCEL_4G_FS, GYRO_2000_FS, DLPF_2, DLPF_1) == OK) HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+
+  HAL_TIM_Base_Start_IT(&htim1);
+  HAL_TIM_Base_Start_IT(&htim2);
 
   /* USER CODE END 2 */
 
@@ -184,7 +190,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -212,17 +218,15 @@ static void MX_TIM1_Init(void)
   /* USER CODE END TIM1_Init 0 */
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_SlaveConfigTypeDef sSlaveConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_IC_InitTypeDef sConfigIC = {0};
 
   /* USER CODE BEGIN TIM1_Init 1 */
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 0;
+  htim1.Init.Prescaler = 719;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 65535;
+  htim1.Init.Period = 4000;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -235,34 +239,9 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_TIM_IC_Init(&htim1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
-  sSlaveConfig.InputTrigger = TIM_TS_TI1FP1;
-  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
-  sSlaveConfig.TriggerFilter = 0;
-  if (HAL_TIM_SlaveConfigSynchro(&htim1, &sSlaveConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
-  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
-  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 0;
-  if (HAL_TIM_IC_ConfigChannel(&htim1, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigIC.ICSelection = TIM_ICSELECTION_INDIRECTTI;
-  if (HAL_TIM_IC_ConfigChannel(&htim1, &sConfigIC, TIM_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -273,33 +252,47 @@ static void MX_TIM1_Init(void)
 }
 
 /**
-  * @brief USB Initialization Function
+  * @brief TIM2 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_USB_PCD_Init(void)
+static void MX_TIM2_Init(void)
 {
 
-  /* USER CODE BEGIN USB_Init 0 */
+  /* USER CODE BEGIN TIM2_Init 0 */
 
-  /* USER CODE END USB_Init 0 */
+  /* USER CODE END TIM2_Init 0 */
 
-  /* USER CODE BEGIN USB_Init 1 */
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
 
-  /* USER CODE END USB_Init 1 */
-  hpcd_USB_FS.Instance = USB;
-  hpcd_USB_FS.Init.dev_endpoints = 8;
-  hpcd_USB_FS.Init.speed = PCD_SPEED_FULL;
-  hpcd_USB_FS.Init.low_power_enable = DISABLE;
-  hpcd_USB_FS.Init.lpm_enable = DISABLE;
-  hpcd_USB_FS.Init.battery_charging_enable = DISABLE;
-  if (HAL_PCD_Init(&hpcd_USB_FS) != HAL_OK)
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 7199;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 1600;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN USB_Init 2 */
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
 
-  /* USER CODE END USB_Init 2 */
+  /* USER CODE END TIM2_Init 2 */
 
 }
 
@@ -336,7 +329,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = NCS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(NCS_GPIO_Port, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
@@ -344,6 +337,65 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if(htim->Instance == TIM1) //check if the interrupt comes from TIM1
+  {
+    double dt = 1.0 / 5000.0;
+
+    uint8_t tx_data[] = {ACCEL_XOUT_H | READ, ACCEL_XOUT_L | READ, ACCEL_YOUT_H | READ, ACCEL_YOUT_L | READ, ACCEL_ZOUT_H | READ, ACCEL_ZOUT_L | READ, GYRO_XOUT_H | READ, GYRO_XOUT_L | READ, GYRO_YOUT_H | READ, GYRO_YOUT_L | READ, GYRO_ZOUT_H | READ, GYRO_ZOUT_L | READ, 0x00};
+    uint8_t rx_data[13];
+    HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_RESET);
+    HAL_SPI_TransmitReceive(mpu.port, tx_data, rx_data, 13, 5000);
+    HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_SET);
+
+    double wx, wy, wz, len, a, sina, h, i, j, k;
+    wx = (((int16_t) rx_data[8] << 8) | rx_data[7]) * mpu.gyro_scale  * 3.14159265359 / 180.0 / 32767.5;
+    wy = (((int16_t) rx_data[10] << 8) | rx_data[9]) * mpu.gyro_scale  * 3.14159265359 / 180.0 / 32767.5;
+    wz = (((int16_t) rx_data[12] << 8) | rx_data[11]) * mpu.gyro_scale  * 3.14159265359 / 180.0 / 32767.5;
+
+    len = sqrt(wx*wx + wy*wy + wz*wz);
+    if(len > 0.000001){
+      a = len * dt;
+      sina = sin(a/2);
+      h = cos(a/2);
+      i = wx / len * sina;
+      j = wy / len * sina;
+      k = wz / len * sina;
+
+      orient[4] = orient[0] * h - orient[1] * i - orient[2] * j - orient[3] * k;
+      orient[5] = orient[0] * i + orient[1] * h + orient[2] * k - orient[3] * j;
+      orient[6] = orient[0] * j - orient[1] * k + orient[2] * h + orient[3] * i;
+      orient[7] = orient[0] * k + orient[1] * j - orient[2] * i + orient[3] * h;
+
+      len = sqrt(orient[4]*orient[4] + orient[5]*orient[5] + orient[6]*orient[6] + orient[7]*orient[7]);
+
+      orient[4] /= len;
+      orient[5] /= len;
+      orient[6] /= len;
+      orient[7] /= len;
+
+      orient[0] = orient[4];
+      orient[1] = orient[5];
+      orient[2] = orient[6];
+      orient[3] = orient[7];
+    }
+  }
+
+  if(htim->Instance == TIM2){
+    orient[4] *= 1000000;
+    orient[5] *= 1000000;
+    orient[6] *= 1000000;
+    orient[7] *= 1000000;
+    unsigned char tx_data[80];
+    sprintf(tx_data, "%c%d.%06d ", orient[4]>0? '+': '-', (int) orient[4] / 1000000, abs((int) orient[4]) % 1000000);
+    sprintf(tx_data + 10, "%c%d.%06d ", orient[5]>0? '+': '-', (int) orient[5] / 1000000, abs((int) orient[5]) % 1000000);
+    sprintf(tx_data + 20, "%c%d.%06d ", orient[6]>0? '+': '-', (int) orient[6] / 1000000, abs((int) orient[6]) % 1000000);
+    sprintf(tx_data + 30, "%c%d.%06d\n\0", orient[7]>0? '+': '-', (int) orient[7] / 1000000, abs((int) orient[7]) % 1000000);
+    CDC_Transmit_FS(tx_data, strlen(tx_data));
+  }
+}
 
 /* USER CODE END 4 */
 

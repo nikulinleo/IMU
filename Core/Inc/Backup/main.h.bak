@@ -32,6 +32,9 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include "MY_MPU.h"
+#include "math.h"
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -59,8 +62,6 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define NCS_Pin GPIO_PIN_4
 #define NCS_GPIO_Port GPIOA
-#define INT_Pin GPIO_PIN_0
-#define INT_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

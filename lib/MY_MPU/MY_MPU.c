@@ -38,15 +38,35 @@ MPU_STATUS init(MPU* mpu, SPI_HandleTypeDef* spi_instance,
     }
     mpu -> gyro_scale = g_scale;
 
-    uint8_t tx_data[20] = {WHOAMI|READ, 0x0};
-    uint8_t rx_data[20];
+    uint8_t tx_data[16] = {PWR_MGMT_1, 0x80, PWR_MGMT_1, 0x00, USER_CTRL, 0x10, WHOAMI|READ, 0x00, GYRO_CONFIG, (mpu->MPU_gyro_scale) << 3, ACCEL_CONFIG, (mpu->MPU_accel_scale) << 3, CONFIG, mpu->g_DLFP_mode, ACCEL_CONFIG2, mpu->a_DLFP_mode};
+    uint8_t rx_data[16];
 
     //test connection
     HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_RESET);
-    HAL_SPI_TransmitReceive(mpu -> port, tx_data, rx_data, 2, 500);
+    HAL_SPI_TransmitReceive(mpu -> port, tx_data, rx_data, 2, 5000);
     HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_SET);
 
-    if(rx_data[1] != 0x71) {return ERR;}
+    HAL_Delay(10);
+
+    HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_RESET);
+    HAL_SPI_TransmitReceive(mpu -> port, tx_data+2, rx_data, 4, 5000);
+    HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_SET);
+
+    HAL_Delay(10);
+
+    HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_RESET);
+    HAL_SPI_TransmitReceive(mpu -> port, tx_data+8, rx_data, 8, 5000);
+    HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_SET);
+
+    HAL_Delay(10);
+        
+    HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_RESET);
+    HAL_SPI_TransmitReceive(mpu -> port, tx_data+6, rx_data, 2, 5000);
+    HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_SET);
+
+    HAL_Delay(10);
+
+    if(rx_data[1] != 0x70) {return ERR;}
 
     return OK;
 
