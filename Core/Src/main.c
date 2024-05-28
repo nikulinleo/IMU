@@ -50,7 +50,7 @@ TIM_HandleTypeDef htim2;
 
 MPU mpu;
 
-double volatile orient[8]={0,1,0,0,0,0,0,0};
+double orient[8]={0,1,0,0,0,0,0,0};
 
 /* USER CODE END PV */
 
@@ -103,7 +103,7 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
-  if(init(&mpu, &hspi1, ACCEL_4G_FS, GYRO_2000_FS, DLPF_2, DLPF_1) == OK) HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+  if(init(&mpu, &hspi1, ACCEL_8G_FS, GYRO_2000_FS, DLPF_1, DLPF_1) == OK) HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   HAL_TIM_Base_Start_IT(&htim1);
   HAL_TIM_Base_Start_IT(&htim2);
@@ -344,56 +344,53 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   {
     double dt = 1.0 / 5000.0;
 
-    uint8_t tx_data[] = {ACCEL_XOUT_H | READ, ACCEL_XOUT_L | READ, ACCEL_YOUT_H | READ, ACCEL_YOUT_L | READ, ACCEL_ZOUT_H | READ, ACCEL_ZOUT_L | READ, GYRO_XOUT_H | READ, GYRO_XOUT_L | READ, GYRO_YOUT_H | READ, GYRO_YOUT_L | READ, GYRO_ZOUT_H | READ, GYRO_ZOUT_L | READ, 0x00};
-    uint8_t rx_data[13];
+    uint8_t tx_data[] = {ACCEL_XOUT_H | READ, ACCEL_XOUT_L | READ, ACCEL_YOUT_H | READ, ACCEL_YOUT_L | READ, ACCEL_ZOUT_H | READ, ACCEL_ZOUT_L | READ, GYRO_XOUT_H | READ, GYRO_XOUT_L | READ, GYRO_YOUT_H | READ, GYRO_YOUT_L | READ, GYRO_ZOUT_H | READ, GYRO_ZOUT_L | READ, 0x00 | READ,  0x00 | READ};
+    uint8_t rx_data[14];
+
     HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_RESET);
-    HAL_SPI_TransmitReceive(mpu.port, tx_data, rx_data, 13, 5000);
+    HAL_SPI_TransmitReceive(mpu.port, tx_data, rx_data, 14, 500);
     HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_SET);
 
-    double wx, wy, wz, len, a, sina, h, i, j, k;
-    wx = (((int16_t) rx_data[8] << 8) | rx_data[7]) * mpu.gyro_scale  * 3.14159265359 / 180.0 / 32767.5;
-    wy = (((int16_t) rx_data[10] << 8) | rx_data[9]) * mpu.gyro_scale  * 3.14159265359 / 180.0 / 32767.5;
-    wz = (((int16_t) rx_data[12] << 8) | rx_data[11]) * mpu.gyro_scale  * 3.14159265359 / 180.0 / 32767.5;
+    orient[4] = ((int16_t) (((int16_t) rx_data[7] << 8) | rx_data[8])) * 16.0 / mpu.accel_scale / 32768.0;
+    orient[5] = ((int16_t) (((int16_t) rx_data[9] << 8) | rx_data[10])) * 16.0 / mpu.accel_scale / 32768.0;
+    orient[6] = ((int16_t) (((int16_t) rx_data[11] << 8) | rx_data[12])) * 16.0 / mpu.accel_scale / 32768.0;
 
-    len = sqrt(wx*wx + wy*wy + wz*wz);
-    if(len > 0.000001){
-      a = len * dt;
-      sina = sin(a/2);
-      h = cos(a/2);
-      i = wx / len * sina;
-      j = wy / len * sina;
-      k = wz / len * sina;
-
-      orient[4] = orient[0] * h - orient[1] * i - orient[2] * j - orient[3] * k;
-      orient[5] = orient[0] * i + orient[1] * h + orient[2] * k - orient[3] * j;
-      orient[6] = orient[0] * j - orient[1] * k + orient[2] * h + orient[3] * i;
-      orient[7] = orient[0] * k + orient[1] * j - orient[2] * i + orient[3] * h;
-
-      len = sqrt(orient[4]*orient[4] + orient[5]*orient[5] + orient[6]*orient[6] + orient[7]*orient[7]);
-
-      orient[4] /= len;
-      orient[5] /= len;
-      orient[6] /= len;
-      orient[7] /= len;
-
-      orient[0] = orient[4];
-      orient[1] = orient[5];
-      orient[2] = orient[6];
-      orient[3] = orient[7];
-    }
+    // len = sqrt(wx*wx + wy*wy + wz*wz);
+    // if(len > 0.000001){
+    //   a = len * dt;
+    //   sina = sin(a/2);
+    //   h = cos(a/2);
+    //   i = wx / len * sina;
+    //   j = wy / len * sina;
+    //   k = wz / len * sina;
+    //
+    //   orient[4] = orient[0] * h - orient[1] * i - orient[2] * j - orient[3] * k;
+    //   orient[5] = orient[0] * i + orient[1] * h + orient[2] * k - orient[3] * j;
+    //   orient[6] = orient[0] * j - orient[1] * k + orient[2] * h + orient[3] * i;
+    //   orient[7] = orient[0] * k + orient[1] * j - orient[2] * i + orient[3] * h;
+    //
+    //   len = sqrt(orient[4]*orient[4] + orient[5]*orient[5] + orient[6]*orient[6] + orient[7]*orient[7]);
+    //
+    //   orient[4] /= len;
+    //   orient[5] /= len;
+    //   orient[6] /= len;
+    //   orient[7] /= len;
+    //
+    //   orient[0] = orient[4];
+    //   orient[1] = orient[5];
+    //   orient[2] = orient[6];
+    //   orient[3] = orient[7];
+    // }
   }
 
   if(htim->Instance == TIM2){
-    orient[4] *= 1000000;
-    orient[5] *= 1000000;
-    orient[6] *= 1000000;
-    orient[7] *= 1000000;
-    unsigned char tx_data[80];
-    sprintf(tx_data, "%c%d.%06d ", orient[4]>0? '+': '-', (int) orient[4] / 1000000, abs((int) orient[4]) % 1000000);
-    sprintf(tx_data + 10, "%c%d.%06d ", orient[5]>0? '+': '-', (int) orient[5] / 1000000, abs((int) orient[5]) % 1000000);
-    sprintf(tx_data + 20, "%c%d.%06d ", orient[6]>0? '+': '-', (int) orient[6] / 1000000, abs((int) orient[6]) % 1000000);
-    sprintf(tx_data + 30, "%c%d.%06d\n\0", orient[7]>0? '+': '-', (int) orient[7] / 1000000, abs((int) orient[7]) % 1000000);
-    CDC_Transmit_FS(tx_data, strlen(tx_data));
+    orient[4] *= 10000;
+    orient[5] *= 10000;
+    orient[6] *= 10000;
+    char tusb_data[90];
+    sprintf(tusb_data, "%+03d.%04d  %+03d.%04d  %+03d.%04d\n", (long) orient[4]/10000, labs((long) orient[4])%10000, (long) orient[5]/10000, labs((long)orient[5])%10000, (long) orient[6]/10000, labs((long)orient[6])%10000);
+
+    CDC_Transmit_FS(tusb_data, strlen(tusb_data));
   }
 }
 
