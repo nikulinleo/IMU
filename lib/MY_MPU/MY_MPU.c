@@ -38,7 +38,8 @@ MPU_STATUS init(MPU* mpu, SPI_HandleTypeDef* spi_instance,
     }
     mpu -> gyro_scale = g_scale;
 
-    uint8_t tx_data[24] = { PWR_MGMT_1, 0x80, 
+    uint8_t tx_data[24] = { PWR_MGMT_1, 0x80,
+                            USER_CTRL, 0x10, 
                             PWR_MGMT_1, 0x00, 
                             PWR_MGMT_1, 0x01,
                             CONFIG, mpu->g_DLFP_mode,
@@ -48,7 +49,6 @@ MPU_STATUS init(MPU* mpu, SPI_HandleTypeDef* spi_instance,
                             ACCEL_CONFIG2, mpu->a_DLFP_mode ,
                             INT_PIN_CFG, 0x32,
                             INT_ENABLE, 0x01,
-                            USER_CTRL, 0x10, 
                             WHOAMI|READ, 0x00,
                             };
     uint8_t rx_data[24];
