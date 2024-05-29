@@ -53,19 +53,22 @@ MPU mpu;
 int16_t orient[8]={0,0,0,0,0,0,0,0};
 
 uint8_t tx_data[] = { (ACCEL_XOUT_L-2) | READ, 
-                      (ACCEL_XOUT_H-2) | READ, 
+                      (ACCEL_XOUT_H-2) | READ,
+                      0x00 | READ, 
                       (ACCEL_YOUT_L-2) | READ,
                       (ACCEL_YOUT_H-2) | READ, 
+                      0x00 | READ,
                       (ACCEL_ZOUT_L-2) | READ, 
                       (ACCEL_ZOUT_H-2) | READ, 
+                      0x00 | READ,
                       (GYRO_XOUT_L-2) | READ, 
                       (GYRO_XOUT_H-2) | READ, 
+                      0x00 | READ,
                       (GYRO_YOUT_L-2) | READ, 
                       (GYRO_YOUT_H-2) | READ, 
+                      0x00 | READ,
                       (GYRO_ZOUT_L-2) | READ, 
                       (GYRO_ZOUT_H-2) | READ, 
-                      0x00 | READ,
-                      0x00 | READ,
                       0x00 | READ};
 
 /* USER CODE END PV */
@@ -206,7 +209,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -361,18 +364,19 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     double dt = 1.0 / 5000.0;
 
     
-    int16_t rx_data[8];
-
-    HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_RESET);
-    HAL_SPI_TransmitReceive(mpu.port, tx_data, (int8_t *) rx_data + 1, 15, 1500);
-    HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_SET);
+    int16_t rx_data[12];
+    for(int j = 0; j < 6; ++j){
+      HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_RESET);
+      HAL_SPI_TransmitReceive(mpu.port, tx_data + j*3, (int8_t *) rx_data + j*4 + 1, 3, 500);
+      HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_SET);
+    }
 
     orient[0] = rx_data[1];
-    orient[1] = rx_data[2];
-    orient[2] = rx_data[3];
-    orient[3] = rx_data[5];
-    orient[4] = rx_data[6];
-    orient[5] = rx_data[7];
+    orient[1] = rx_data[3];
+    orient[2] = rx_data[5];
+    orient[3] = rx_data[7];
+    orient[4] = rx_data[9];
+    orient[5] = rx_data[11];
 
 
     // len = sqrt(wx*wx + wy*wy + wz*wz);
