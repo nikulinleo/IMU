@@ -50,7 +50,23 @@ TIM_HandleTypeDef htim2;
 
 MPU mpu;
 
-double orient[8]={0,1,0,0,0,0,0,0};
+int16_t orient[8]={0,0,0,0,0,0,0,0};
+
+uint8_t tx_data[] = { (ACCEL_XOUT_L-2) | READ, 
+                      (ACCEL_XOUT_H-2) | READ, 
+                      (ACCEL_YOUT_L-2) | READ,
+                      (ACCEL_YOUT_H-2) | READ, 
+                      (ACCEL_ZOUT_L-2) | READ, 
+                      (ACCEL_ZOUT_H-2) | READ, 
+                      (GYRO_XOUT_L-2) | READ, 
+                      (GYRO_XOUT_H-2) | READ, 
+                      (GYRO_YOUT_L-2) | READ, 
+                      (GYRO_YOUT_H-2) | READ, 
+                      (GYRO_ZOUT_L-2) | READ, 
+                      (GYRO_ZOUT_H-2) | READ, 
+                      0x00 | READ,
+                      0x00 | READ,
+                      0x00 | READ};
 
 /* USER CODE END PV */
 
@@ -344,16 +360,20 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   {
     double dt = 1.0 / 5000.0;
 
-    uint8_t tx_data[] = {ACCEL_XOUT_H | READ, ACCEL_XOUT_L | READ, ACCEL_YOUT_H | READ, ACCEL_YOUT_L | READ, ACCEL_ZOUT_H | READ, ACCEL_ZOUT_L | READ, GYRO_XOUT_H | READ, GYRO_XOUT_L | READ, GYRO_YOUT_H | READ, GYRO_YOUT_L | READ, GYRO_ZOUT_H | READ, GYRO_ZOUT_L | READ, 0x00 | READ,  0x00 | READ};
-    uint8_t rx_data[14];
+    
+    int16_t rx_data[8];
 
     HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_RESET);
-    HAL_SPI_TransmitReceive(mpu.port, tx_data, rx_data, 14, 500);
+    HAL_SPI_TransmitReceive(mpu.port, tx_data, (int8_t *) rx_data + 1, 15, 1500);
     HAL_GPIO_WritePin(NCS_GPIO_Port, NCS_Pin, GPIO_PIN_SET);
 
-    orient[4] = ((int16_t) (((int16_t) rx_data[7] << 8) | rx_data[8])) * 16.0 / mpu.accel_scale / 32768.0;
-    orient[5] = ((int16_t) (((int16_t) rx_data[9] << 8) | rx_data[10])) * 16.0 / mpu.accel_scale / 32768.0;
-    orient[6] = ((int16_t) (((int16_t) rx_data[11] << 8) | rx_data[12])) * 16.0 / mpu.accel_scale / 32768.0;
+    orient[0] = rx_data[1];
+    orient[1] = rx_data[2];
+    orient[2] = rx_data[3];
+    orient[3] = rx_data[5];
+    orient[4] = rx_data[6];
+    orient[5] = rx_data[7];
+
 
     // len = sqrt(wx*wx + wy*wy + wz*wz);
     // if(len > 0.000001){
@@ -384,11 +404,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   }
 
   if(htim->Instance == TIM2){
-    orient[4] *= 10000;
-    orient[5] *= 10000;
-    orient[6] *= 10000;
+    // orient[4] *= 10000.0;
+    // orient[5] *= 10000.0;
+    // orient[6] *= 10000.0;
     char tusb_data[90];
-    sprintf(tusb_data, "%+03d.%04d  %+03d.%04d  %+03d.%04d\n", (long) orient[4]/10000, labs((long) orient[4])%10000, (long) orient[5]/10000, labs((long)orient[5])%10000, (long) orient[6]/10000, labs((long)orient[6])%10000);
+    sprintf(tusb_data, "%d  %d  %d  %d  %d  %d\n", orient[0], orient[1], orient[2], orient[3], orient[4], orient[5]);
 
     CDC_Transmit_FS(tusb_data, strlen(tusb_data));
   }
